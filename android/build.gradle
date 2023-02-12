@@ -18,6 +18,36 @@ buildscript {
             // Otherwise we default to the side-by-side NDK version from AGP.
             ndkVersion = '21.4.7075529'
         }
+
+        // We use NDK 23 which has both M1 support and is the side-by-side NDK version from AGP.
+        ndkVersion = "23.1.7779620"
+
+        RNMapboxMapsImpl = "mapbox"
+
+        useCustomMapbox = false
+
+        if (System.getenv('CI_MAP_IMPL').equals('maplibre')) {
+            RNMapboxMapsImpl = "maplibre"
+        } else if (System.getenv('CI_MAP_IMPL').equals('mapbox')) {
+            RNMapboxMapsImpl = "mapbox"
+            kotlinVersion = '1.6.21'
+        } else if (System.getenv('CI_MAP_IMPL').equals('mapbox-gl')) {
+            RNMapboxMapsImpl = "mapbox-gl"
+        }
+
+        if (useCustomMapbox) {
+            RNMapboxMapsLibs = {
+                implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:9.7.1'
+                implementation 'com.mapbox.mapboxsdk:mapbox-sdk-services:5.8.0'
+                implementation 'com.mapbox.mapboxsdk:mapbox-sdk-turf:5.8.0'
+                implementation 'com.mapbox.mapboxsdk:mapbox-android-gestures:0.7.0'
+
+                implementation 'com.mapbox.mapboxsdk:mapbox-android-plugin-annotation-v9:0.8.0'
+                implementation 'com.mapbox.mapboxsdk:mapbox-android-plugin-localization-v9:0.14.0'
+                implementation 'com.mapbox.mapboxsdk:mapbox-android-plugin-markerview-v9:0.4.0'
+            }
+        }
+
     }
     repositories {
         google()
@@ -51,7 +81,35 @@ allprojects {
             // Android JSC is installed from npm
             url(new File(['node', '--print', "require.resolve('jsc-android/package.json')"].execute(null, rootDir).text.trim(), '../dist'))
         }
+         if (rootProject.ext.get("RNMapboxMapsImpl") == "mapbox") {
+                maven {
+                    url 'https://api.mapbox.com/downloads/v2/releases/maven'
+                    authentication {
+                        basic(BasicAuthentication)
+                    }
+                    credentials {
+                        // Do not change the username below.
+                        // This should always be mapbox (not your username).
+                        username = 'mapbox'
+                        // Use the secret token you stored in gradle.properties as the password
+                        password = project.properties['MAPBOX_DOWNLOADS_TOKEN'] ?: ""
+                    }
+                }
+            }
 
+            if (rootProject.ext.get('useCustomMapbox')) {
+                maven {
+                    url 'https://api.mapbox.com/downloads/v2/releases/maven'
+                    authentication {
+                        basic(BasicAuthentication)
+                    }
+                    credentials {
+                        username = "mapbox"
+                        password = "REPLACE WITH YOUR MAPBOX DOWNLOAD TOKEN"
+
+                    }
+                }
+            }
         google()
         mavenCentral {
             // We don't want to fetch react-native from Maven Central as there are
